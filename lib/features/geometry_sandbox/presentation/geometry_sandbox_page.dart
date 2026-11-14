@@ -5,63 +5,20 @@ library;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/formatting.dart';
+import '../application/geometry_sandbox_notifier.dart';
 
-class GeometrySandboxPage extends StatefulWidget {
+class GeometrySandboxPage extends ConsumerWidget {
   const GeometrySandboxPage({super.key});
 
   @override
-  State<GeometrySandboxPage> createState() => _GeometrySandboxPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(geometrySandboxProvider);
+    final notifier = ref.read(geometrySandboxProvider.notifier);
+    final r = s.results;
 
-class _GeometrySandboxPageState extends State<GeometrySandboxPage> {
-  String shape = 'Square';
-  double d1 = 4; // side / width / radius / base
-  double d2 = 3; // height / length (rectangle, triangle)
-
-  String get _d1Label => switch (shape) {
-        'Circle' => 'Radius',
-        'Triangle' => 'Base',
-        'Rectangle' => 'Width',
-        _ => 'Side',
-      };
-
-  bool get _needsD2 => shape == 'Rectangle' || shape == 'Triangle';
-
-  ({double area, double perimeter, String formula}) get _results {
-    switch (shape) {
-      case 'Circle':
-        return (
-          area: math.pi * d1 * d1,
-          perimeter: 2 * math.pi * d1,
-          formula: 'Area = πr², Circumference = 2πr',
-        );
-      case 'Rectangle':
-        return (
-          area: d1 * d2,
-          perimeter: 2 * (d1 + d2),
-          formula: 'Area = w × h, Perimeter = 2(w + h)',
-        );
-      case 'Triangle':
-        final side = math.sqrt(math.pow(d1 / 2, 2) + math.pow(d2, 2));
-        return (
-          area: 0.5 * d1 * d2,
-          perimeter: d1 + 2 * side,
-          formula: 'Area = ½ × base × height (isosceles)',
-        );
-      default:
-        return (
-          area: d1 * d1,
-          perimeter: 4 * d1,
-          formula: 'Area = s², Perimeter = 4s',
-        );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final r = _results;
     return Scaffold(
       appBar: AppBar(title: const Text('Geometry Sandbox')),
       body: SingleChildScrollView(
@@ -72,11 +29,11 @@ class _GeometrySandboxPageState extends State<GeometrySandboxPage> {
             Wrap(
               spacing: 8,
               children: [
-                for (final s in ['Square', 'Rectangle', 'Circle', 'Triangle'])
+                for (final shape in ['Square', 'Rectangle', 'Circle', 'Triangle'])
                   ChoiceChip(
-                    label: Text(s),
-                    selected: shape == s,
-                    onSelected: (_) => setState(() => shape = s),
+                    label: Text(shape),
+                    selected: s.shape == shape,
+                    onSelected: (_) => notifier.setShape(shape),
                   ),
               ],
             ),
@@ -88,29 +45,29 @@ class _GeometrySandboxPageState extends State<GeometrySandboxPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: CustomPaint(
-                painter: _ShapePainter(shape: shape, d1: d1, d2: d2),
+                painter: _ShapePainter(shape: s.shape, d1: s.d1, d2: s.d2),
                 child: const SizedBox.expand(),
               ),
             ),
             const SizedBox(height: 16),
-            Text('$_d1Label: ${fmtNum(d1)}'),
+            Text('${s.d1Label}: ${fmtNum(s.d1)}'),
             Slider(
-              value: d1,
+              value: s.d1,
               min: 1,
               max: 10,
               divisions: 36,
-              label: fmtNum(d1),
-              onChanged: (v) => setState(() => d1 = v),
+              label: fmtNum(s.d1),
+              onChanged: notifier.setD1,
             ),
-            if (_needsD2) ...[
-              Text('${shape == 'Triangle' ? 'Height' : 'Length'}: ${fmtNum(d2)}'),
+            if (s.needsD2) ...[
+              Text('${s.shape == 'Triangle' ? 'Height' : 'Length'}: ${fmtNum(s.d2)}'),
               Slider(
-                value: d2,
+                value: s.d2,
                 min: 1,
                 max: 10,
                 divisions: 36,
-                label: fmtNum(d2),
-                onChanged: (v) => setState(() => d2 = v),
+                label: fmtNum(s.d2),
+                onChanged: notifier.setD2,
               ),
             ],
             const SizedBox(height: 8),
@@ -124,7 +81,7 @@ class _GeometrySandboxPageState extends State<GeometrySandboxPage> {
                         style: const TextStyle(
                             fontSize: 17, fontWeight: FontWeight.bold)),
                     Text(
-                        '${shape == 'Circle' ? 'Circumference' : 'Perimeter'} = ${fmtNum(r.perimeter)}',
+                        '${s.shape == 'Circle' ? 'Circumference' : 'Perimeter'} = ${fmtNum(r.perimeter)}',
                         style: const TextStyle(
                             fontSize: 17, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
