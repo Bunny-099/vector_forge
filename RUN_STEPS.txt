@@ -1,0 +1,24 @@
+VECTOR FORGE - RUN STEPS (simple)
+
+1) Is ZIP ko unzip karo. Ek folder milega: vector_forge
+
+2) Us folder ke andar terminal / Android Studio ka Terminal kholo aur ye command chalao:
+   flutter create --project-name vector_forge .
+   Isse android/ wala hissa Flutter khud bana dega (tumhare SDK ke hisaab se).
+   NOTE: Agar ye command lib/ ki koi file ya pubspec.yaml badal de, to
+   source_backup/lib ki saari files lib/ me wapas copy kar dena aur
+   source_backup/pubspec.yaml ko pubspec.yaml par copy kar dena.
+
+3) Phir:
+   flutter pub get
+
+4) App chalao:
+   flutter run
+   Check values: A=(3,4,0) par |A| = 5.00 dikhe.
+   A=(5,4,0), B=(-2,1.5,0) par A.B = -4.00 aur angle = 104.47 degree dikhe.
+   Error aaye to uska screenshot/text Muse ko bhej do.
+
+5) Sab sahi ho to release APK:
+   flutter build apk --release
+   APK yahan milega: build/app/outputs/flutter-apk/app-release.apk
+   Use Google Drive par upload karke link email karna hai (deadline: Sat 14 Nov, 11:30 AM).

@@ -1,0 +1,19 @@
+name: vector_forge
+description: Vector Forge - recreation of the Vector Forge section in Flutter with Riverpod (Phase 1 assessment).
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
