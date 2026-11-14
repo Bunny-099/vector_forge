@@ -3,23 +3,22 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/formatting.dart';
+import '../application/matrix_notifier.dart';
 
-class ColorCubeMatrixPage extends StatefulWidget {
+class ColorCubeMatrixPage extends ConsumerStatefulWidget {
   const ColorCubeMatrixPage({super.key});
 
   @override
-  State<ColorCubeMatrixPage> createState() => _ColorCubeMatrixPageState();
+  ConsumerState<ColorCubeMatrixPage> createState() =>
+      _ColorCubeMatrixPageState();
 }
 
-class _ColorCubeMatrixPageState extends State<ColorCubeMatrixPage> {
-  int n = 2;
+class _ColorCubeMatrixPageState extends ConsumerState<ColorCubeMatrixPage> {
   late final List<TextEditingController> aCtrl;
   late final List<TextEditingController> bCtrl;
-  String resultLabel = '';
-  List<List<double>>? result;
-  double? detValue;
 
   @override
   void initState() {
@@ -41,71 +40,23 @@ class _ColorCubeMatrixPageState extends State<ColorCubeMatrixPage> {
     super.dispose();
   }
 
-  double _val(List<TextEditingController> ctrls, int i, int j) =>
-      double.tryParse(ctrls[i * 3 + j].text.trim()) ?? 0;
-
-  List<List<double>> _read(List<TextEditingController> ctrls) => [
-        for (var i = 0; i < n; i++)
-          [for (var j = 0; j < n; j++) _val(ctrls, i, j)]
+  List<double> _readFlat(List<TextEditingController> ctrls) => [
+        for (final c in ctrls) double.tryParse(c.text.trim()) ?? 0,
       ];
 
   void _compute(String op) {
-    final a = _read(aCtrl);
-    final b = _read(bCtrl);
-    setState(() {
-      detValue = null;
-      switch (op) {
-        case 'add':
-          result = [
-            for (var i = 0; i < n; i++)
-              [for (var j = 0; j < n; j++) a[i][j] + b[i][j]]
-          ];
-          resultLabel = 'A + B';
-          break;
-        case 'sub':
-          result = [
-            for (var i = 0; i < n; i++)
-              [for (var j = 0; j < n; j++) a[i][j] - b[i][j]]
-          ];
-          resultLabel = 'A − B';
-          break;
-        case 'mul':
-          result = [
-            for (var i = 0; i < n; i++)
-              [
-                for (var j = 0; j < n; j++)
-                  [for (var k = 0; k < n; k++) a[i][k] * b[k][j]]
-                      .fold<double>(0, (s, v) => s + v)
-              ]
-          ];
-          resultLabel = 'A × B';
-          break;
-        case 'transpose':
-          result = [
-            for (var i = 0; i < n; i++)
-              [for (var j = 0; j < n; j++) a[j][i]]
-          ];
-          resultLabel = 'Transpose of A';
-          break;
-        case 'det':
-          result = null;
-          if (n == 2) {
-            detValue = a[0][0] * a[1][1] - a[0][1] * a[1][0];
-          } else {
-            detValue = a[0][0] * (a[1][1] * a[2][2] - a[1][2] * a[2][1]) -
-                a[0][1] * (a[1][0] * a[2][2] - a[1][2] * a[2][0]) +
-                a[0][2] * (a[1][0] * a[2][1] - a[1][1] * a[2][0]);
-          }
-          resultLabel = 'det(A)';
-          break;
-      }
-    });
+    ref.read(matrixProvider.notifier).compute(
+          op,
+          _readFlat(aCtrl),
+          _readFlat(bCtrl),
+        );
   }
 
   String _fmt(double v) =>
       v == v.roundToDouble() ? v.toInt().toString() : fmtNum(v);
 
-  Widget _matrix(String name, Color color, List<TextEditingController> ctrls) {
+  Widget _matrix(
+      String name, Color color, List<TextEditingController> ctrls, int n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -145,6 +96,9 @@ class _ColorCubeMatrixPageState extends State<ColorCubeMatrixPage> {
 
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(matrixProvider);
+    final n = state.n;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Color Cube Matrix')),
       body: SingleChildScrollView(
@@ -158,17 +112,13 @@ class _ColorCubeMatrixPageState extends State<ColorCubeMatrixPage> {
                 ButtonSegment(value: 3, label: Text('3 x 3')),
               ],
               selected: {n},
-              onSelectionChanged: (sel) => setState(() {
-                n = sel.first;
-                result = null;
-                detValue = null;
-                resultLabel = '';
-              }),
+              onSelectionChanged: (sel) =>
+                  ref.read(matrixProvider.notifier).setSize(sel.first),
             ),
             const SizedBox(height: 16),
-            _matrix('A', Colors.blue, aCtrl),
+            _matrix('A', Colors.blue, aCtrl, n),
             const SizedBox(height: 8),
-            _matrix('B', Colors.green, bCtrl),
+            _matrix('B', Colors.green, bCtrl, n),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -192,12 +142,12 @@ class _ColorCubeMatrixPageState extends State<ColorCubeMatrixPage> {
               ],
             ),
             const SizedBox(height: 16),
-            if (detValue != null)
-              Text('det(A) = ${_fmt(detValue!)}',
+            if (state.detValue != null)
+              Text('det(A) = ${_fmt(state.detValue!)}',
                   style: const TextStyle(
                       fontSize: 20, fontWeight: FontWeight.bold)),
-            if (result != null) ...[
-              Text(resultLabel,
+            if (state.result != null) ...[
+              Text(state.resultLabel,
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
@@ -217,7 +167,7 @@ class _ColorCubeMatrixPageState extends State<ColorCubeMatrixPage> {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: Colors.orange),
                             ),
-                            child: Text(_fmt(result![i][j]),
+                            child: Text(_fmt(state.result![i][j]),
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.bold)),
