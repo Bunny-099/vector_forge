@@ -21,6 +21,8 @@ class VectorForgeNotifier extends Notifier<VectorForgeState> {
   void setBComponent(int i, double v) =>
       state = state.copyWith(b: state.b.withComponent(i, clampDouble(v, -range, range)));
 
+  void setDragging(int v) => state = state.copyWith(dragging: v);
+
   /// Used by 2D tip-dragging: x/y change, z stays.
   void dragA(double x, double y) => state =
       state.copyWith(a: Vec3(clampDouble(x, -range, range), clampDouble(y, -range, range), state.a.z));
@@ -42,6 +44,7 @@ class VectorForgeNotifier extends Notifier<VectorForgeState> {
         a: const Vec3(3, 4, 0),
         b: const Vec3(-2, 1.5, 0),
         op: VectorOp.add,
+        dragging: 0,
       );
 }
 

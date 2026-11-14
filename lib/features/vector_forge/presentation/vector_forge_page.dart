@@ -1,5 +1,5 @@
 /// Presentation layer: the Vector Forge screen.
-/// Owns only local UI resources (text controllers, drag tracking);
+/// Owns only local UI resources (text controllers);
 /// all app state is watched from the Riverpod Notifier.
 library;
 
@@ -26,9 +26,6 @@ class VectorForgePage extends ConsumerStatefulWidget {
 class _VectorForgePageState extends ConsumerState<VectorForgePage> {
   static const double range = VectorForgeNotifier.range;
   static const double snap = 0.5;
-
-  // 0 = none, 1 = dragging A tip, 2 = dragging B tip (2D mode, local UI only).
-  int dragging = 0;
 
   late final TextEditingController axCtrl;
   late final TextEditingController ayCtrl;
@@ -80,7 +77,6 @@ class _VectorForgePageState extends ConsumerState<VectorForgePage> {
     return s.isEmpty ? '0' : s;
   }
 
-
   Offset _toMath(Offset local, Size size) {
     final scale = math.min(size.width, size.height) / (range * 2 + 2);
     final x = (local.dx - size.width / 2) / scale;
@@ -89,9 +85,10 @@ class _VectorForgePageState extends ConsumerState<VectorForgePage> {
   }
 
   void _moveDragged(Offset p) {
+    final s = ref.read(vectorForgeProvider);
     final notifier = ref.read(vectorForgeProvider.notifier);
-    if (dragging == 1) notifier.dragA(p.dx, p.dy);
-    if (dragging == 2) notifier.dragB(p.dx, p.dy);
+    if (s.dragging == 1) notifier.dragA(p.dx, p.dy);
+    if (s.dragging == 2) notifier.dragB(p.dx, p.dy);
     _syncControllers();
   }
 
@@ -122,7 +119,7 @@ class _VectorForgePageState extends ConsumerState<VectorForgePage> {
                 SizedBox(height: constraints.maxWidth, child: plane),
                 panel,
               ],
-            ),
+            )
           );
         },
       ),
@@ -132,6 +129,8 @@ class _VectorForgePageState extends ConsumerState<VectorForgePage> {
   Widget _buildPlane() {
     final s = ref.watch(vectorForgeProvider);
     final r = ref.watch(resultProvider);
+    final notifier = ref.read(vectorForgeProvider.notifier);
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
@@ -142,19 +141,19 @@ class _VectorForgePageState extends ConsumerState<VectorForgePage> {
             final p = _toMath(box.globalToLocal(d.globalPosition), size);
             final da = math.sqrt(math.pow(p.dx - s.a.x, 2) + math.pow(p.dy - s.a.y, 2));
             final db = math.sqrt(math.pow(p.dx - s.b.x, 2) + math.pow(p.dy - s.b.y, 2));
-            dragging = da <= db ? 1 : 2;
+            notifier.setDragging(da <= db ? 1 : 2);
             _moveDragged(p);
           },
           onPanUpdate: (d) {
             if (s.mode3D) {
-              ref.read(vectorForgeProvider.notifier).rotate(d.delta.dx * 0.01, d.delta.dy * 0.01);
+              notifier.rotate(d.delta.dx * 0.01, d.delta.dy * 0.01);
               return;
             }
-            if (dragging == 0) return;
+            if (s.dragging == 0) return;
             final box = context.findRenderObject() as RenderBox;
             _moveDragged(_toMath(box.globalToLocal(d.globalPosition), size));
           },
-          onPanEnd: (_) => dragging = 0,
+          onPanEnd: (_) => notifier.setDragging(0),
           child: s.mode3D
               ? CustomPaint(
                   size: size,

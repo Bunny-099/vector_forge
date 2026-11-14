@@ -15,6 +15,7 @@ class VectorForgeState {
   final bool showArc;
   final double yaw;
   final double pitch;
+  final int dragging;
 
   const VectorForgeState({
     this.a = const Vec3(3, 4, 0),
@@ -25,6 +26,7 @@ class VectorForgeState {
     this.showArc = true,
     this.yaw = -0.6,
     this.pitch = 0.45,
+    this.dragging = 0,
   });
 
   /// Resultant for ADD / SUB / CROSS; null for DOT (scalar result).
@@ -63,6 +65,7 @@ class VectorForgeState {
     bool? showArc,
     double? yaw,
     double? pitch,
+    int? dragging,
   }) {
     return VectorForgeState(
       a: a ?? this.a,
@@ -73,6 +76,7 @@ class VectorForgeState {
       showArc: showArc ?? this.showArc,
       yaw: yaw ?? this.yaw,
       pitch: pitch ?? this.pitch,
+      dragging: dragging ?? this.dragging,
     );
   }
 }
