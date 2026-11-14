@@ -5,65 +5,19 @@ library;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/utils/formatting.dart';
+import '../application/coordinate_geometry_notifier.dart';
 
-class CoordinateGeometryPage extends StatefulWidget {
+class CoordinateGeometryPage extends ConsumerWidget {
   const CoordinateGeometryPage({super.key});
 
   @override
-  State<CoordinateGeometryPage> createState() =>
-      _CoordinateGeometryPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(coordinateGeometryProvider);
+    final notifier = ref.read(coordinateGeometryProvider.notifier);
 
-class _CoordinateGeometryPageState extends State<CoordinateGeometryPage> {
-  Offset a = const Offset(2, 3);
-  Offset b = const Offset(-3, -1);
-  String selected = 'A';
-
-  static const double range = 7;
-
-  Offset _toMath(Offset local, Size size) {
-    final unit = math.min(size.width, size.height) / (range * 2);
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final x = ((local.dx - cx) / unit).roundToDouble();
-    final y = (-(local.dy - cy) / unit).roundToDouble();
-    return Offset(
-      x.clamp(-range, range).toDouble(),
-      y.clamp(-range, range).toDouble(),
-    );
-  }
-
-  void _move(Offset local, Size size) {
-    final p = _toMath(local, size);
-    setState(() {
-      if (selected == 'A') {
-        a = p;
-      } else {
-        b = p;
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dx = b.dx - a.dx;
-    final dy = b.dy - a.dy;
-    final dist = math.sqrt(dx * dx + dy * dy);
-    final mid = Offset((a.dx + b.dx) / 2, (a.dy + b.dy) / 2);
-    final String slopeText;
-    final String equationText;
-    if (dx == 0) {
-      slopeText = 'undefined (vertical line)';
-      equationText = 'x = ${fmtNum(a.dx)}';
-    } else {
-      final m = dy / dx;
-      final c = a.dy - m * a.dx;
-      slopeText = fmtNum(m);
-      equationText =
-          'y = ${fmtNum(m)}x ${c >= 0 ? '+' : '−'} ${fmtNum(c.abs())}';
-    }
     return Scaffold(
       appBar: AppBar(title: const Text('Coordinate Geometry')),
       body: Column(
@@ -76,14 +30,14 @@ class _CoordinateGeometryPageState extends State<CoordinateGeometryPage> {
                 const SizedBox(width: 12),
                 ChoiceChip(
                   label: const Text('A'),
-                  selected: selected == 'A',
-                  onSelected: (_) => setState(() => selected = 'A'),
+                  selected: s.selected == 'A',
+                  onSelected: (_) => notifier.setSelected('A'),
                 ),
                 const SizedBox(width: 8),
                 ChoiceChip(
                   label: const Text('B'),
-                  selected: selected == 'B',
-                  onSelected: (_) => setState(() => selected = 'B'),
+                  selected: s.selected == 'B',
+                  onSelected: (_) => notifier.setSelected('B'),
                 ),
                 const Spacer(),
                 const Text('tap or drag on the plane',
@@ -97,11 +51,11 @@ class _CoordinateGeometryPageState extends State<CoordinateGeometryPage> {
                 final size =
                     Size(constraints.maxWidth, constraints.maxHeight);
                 return GestureDetector(
-                  onTapDown: (d) => _move(d.localPosition, size),
-                  onPanUpdate: (d) => _move(d.localPosition, size),
+                  onTapDown: (d) => notifier.movePoint(d.localPosition, size),
+                  onPanUpdate: (d) => notifier.movePoint(d.localPosition, size),
                   child: CustomPaint(
                     size: size,
-                    painter: _PlanePainter(a: a, b: b),
+                    painter: _PlanePainter(a: s.a, b: s.b),
                   ),
                 );
               },
@@ -115,13 +69,14 @@ class _CoordinateGeometryPageState extends State<CoordinateGeometryPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                      'A = (${fmtNum(a.dx)}, ${fmtNum(a.dy)})    B = (${fmtNum(b.dx)}, ${fmtNum(b.dy)})',
+                      'A = (${fmtNum(s.a.dx)}, ${fmtNum(s.a.dy)})    B = (${fmtNum(s.b.dx)}, ${fmtNum(s.b.dy)})',
                       style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
-                  Text('Distance AB = ${fmtNum(dist)}'),
-                  Text('Midpoint = (${fmtNum(mid.dx)}, ${fmtNum(mid.dy)})'),
-                  Text('Slope = $slopeText'),
-                  Text('Equation of line AB: $equationText'),
+                  Text('Distance AB = ${fmtNum(s.dist)}'),
+                  Text(
+                      'Midpoint = (${fmtNum(s.mid.dx)}, ${fmtNum(s.mid.dy)})'),
+                  Text('Slope = ${s.slopeText}'),
+                  Text('Equation of line AB: ${s.equationText}'),
                 ],
               ),
             ),
@@ -140,7 +95,7 @@ class _PlanePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    const range = _CoordinateGeometryPageState.range;
+    const range = CoordinateGeometryNotifier.range;
     final unit = math.min(size.width, size.height) / (range * 2);
     final origin = Offset(size.width / 2, size.height / 2);
     Offset toCanvas(Offset p) =>
